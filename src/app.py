@@ -1,9 +1,11 @@
 import wandb
 import pytorch_lightning as pl
+import torch
 from src.data import VideoDataModule
 from src.models.transformer import VideoTransformer
 from src.models.baseline import BaselineVideoClassifier
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 def main():
     # 1. Initialize WandB
@@ -24,14 +26,28 @@ def main():
     # Or for the baseline:
     # model = BaselineVideoClassifier(num_classes=2, num_frames=16)
 
+    # for working on cpu too 
+    precision = "16-mixed" if torch.cuda.is_available() else 32
+    log_every_n_steps = 5 if torch.cuda.is_available() else 20
+
+    checkpoint_callback = ModelCheckpoint(
+        dirpath="checkpoints/",
+        filename="model-{epoch:02d}-{val_loss:.2f}",
+        monitor="val/loss",
+        mode="min",
+        save_top_k=3,
+        save_last=True,
+    )
+
     # 4. Trainer with WandB
     trainer = pl.Trainer(
         max_epochs=20,
         accelerator="auto",
         devices=1,
         logger=wandb_logger,
-        precision="16-mixed", # Faster training on modern GPUs
-        log_every_n_steps=5
+        precision=precision,
+        log_every_n_steps=log_every_n_steps,
+        callbacks=[checkpoint_callback]
     )
 
     trainer.fit(model, data_module)

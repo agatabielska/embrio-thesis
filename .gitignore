@@ -1,1 +1,8 @@
 /data
+/checkpoints
+/wandb
+__pycache__/
+*.py[cod]
+*.log
+*.ckpt
+embryos_data.zip
